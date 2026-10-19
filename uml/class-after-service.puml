@@ -1,0 +1,81 @@
+@startuml class-after-service
+' ============================================================
+'  重构后分包类图 ⑥：服务门面 与 消费流程模板
+'  模式：Facade + Template Method
+' ============================================================
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 20
+skinparam classFontSize 22
+skinparam classAttributeFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam packageFontSize 22
+skinparam dpi 200
+title 图 2-8  分包类图⑥：服务门面与消费流程（Facade + Template Method）
+
+package "edu.dlut.campuscard.service" {
+
+  class CardService <<Facade>> {
+    - cards : Map<String, Card>
+    - merchants : Map<String, Merchant>
+    - validationChain : ValidationChain
+    - priceCalculator : PriceCalculator
+    - gatewayFactory : PaymentGatewayFactory
+    - consumeFlow : ConsumeFlow
+    - accountBook : AccountGroup
+    - ledger : Ledger
+    - publisher : EventPublisher
+    + addCard(id, holder, type, vip, balance)
+    + addMerchant(id, name, type)
+    + consume(cardId, merchantId, amount, hour) : Result
+    + recharge(cardId, amount) : Result
+    + reportLoss(cardId) : Result
+    + recover(cardId) : Result
+    + report() : String
+  }
+
+  abstract class ConsumeFlow <<Template Method>> {
+    + execute(cardId, merchantId, amount, hour) : Result
+    # resolve(context)
+    # preCheck(context) : Result
+    # price(context)
+    # postCheck(context) : Result
+    # settle(context)
+  }
+  class StandardConsumeFlow <<具体流程>> {
+    - service : CardService
+  }
+  ConsumeFlow <|-- StandardConsumeFlow
+
+  CardService o-- "1" ConsumeFlow : 持有
+  CardService o-- "1" ValidationChain
+  CardService o-- "1" PriceCalculator
+  CardService o-- "1" PaymentGatewayFactory
+  CardService o-- "1" AccountGroup
+  CardService o-- "1" Ledger
+  CardService o-- "1" EventPublisher
+  StandardConsumeFlow ..> CardService : 委托各子系统
+  StandardConsumeFlow ..> ValidationChain : 校验
+  StandardConsumeFlow ..> PriceCalculator : 计费
+  StandardConsumeFlow ..> PaymentGateway : 支付
+  StandardConsumeFlow ..> EventPublisher : 通知
+}
+
+package "edu.dlut.campuscard.app" as app {
+  class ConsoleApp
+  class ApiServer <<JDK HttpServer :8082>>
+  class SceneRunner <<等价证据>>
+  class DemoData
+  class MiniJson
+}
+app ..> CardService : 调用门面
+
+note bottom of ConsumeFlow
+  固定骨架：解析 → 计费前校验 → 计费 → 计费后校验 → 结算
+  方法 execute 为 final，各步骤由子类实现（留扩展钩子）
+  取代重构前把整条流程写死在 consume() 里
+end note
+
+@enduml

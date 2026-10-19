@@ -1,0 +1,19 @@
+{
+  "title": "边界与拒绝：余额不足 / 单日限额 / 非法金额 / 卡不存在",
+  "cards": [
+    {"id": "C300", "holder": "周九", "type": "STUDENT", "vip": false, "balance": 1000},
+    {"id": "C301", "holder": "吴十", "type": "TEACHER", "vip": false, "balance": 100000}
+  ],
+  "merchants": [
+    {"id": "M01", "name": "一食堂", "type": "canteen"}
+  ],
+  "ops": [
+    {"op": "consume", "card": "C300", "merchant": "M01", "amount": 2000, "hour": 12},
+    {"op": "consume", "card": "C999", "merchant": "M01", "amount": 100, "hour": 12},
+    {"op": "consume", "card": "C300", "merchant": "M999", "amount": 100, "hour": 12},
+    {"op": "consume", "card": "C300", "merchant": "M01", "amount": 0, "hour": 12},
+    {"op": "recharge", "card": "C300", "amount": -5},
+    {"op": "consume", "card": "C301", "merchant": "M01", "amount": 12000, "hour": 12},
+    {"op": "consume", "card": "C301", "merchant": "M01", "amount": 9000, "hour": 12}
+  ]
+}

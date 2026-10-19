@@ -1,0 +1,91 @@
+@startuml class-after-account-gateway
+' ============================================================
+'  重构后分包类图 ⑤：账户域 与 支付网关
+'  模式：Composite + Visitor + Adapter + 抽象工厂
+' ============================================================
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 20
+skinparam classFontSize 22
+skinparam classAttributeFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam packageFontSize 22
+skinparam dpi 200
+title 图 2-7  分包类图⑤：账户域与支付网关（Composite + Visitor + Adapter）
+
+package "edu.dlut.campuscard.account" as account {
+  interface AccountComponent <<Composite::Component>> {
+    + accept(visitor : AccountVisitor)
+  }
+  class PersonalAccount <<叶子>> {
+    - card : Card
+    + balance() : long
+  }
+  class MerchantAccount <<叶子>> {
+    - merchantId : String
+    - merchantType : String
+    - totalPaid : long
+    - txnCount : int
+    + record(paid : long)
+  }
+  class AccountGroup <<容器>> {
+    + add(child : AccountComponent)
+  }
+  AccountComponent <|.. PersonalAccount
+  AccountComponent <|.. MerchantAccount
+  AccountComponent <|.. AccountGroup
+  AccountGroup o-- "*" AccountComponent : children
+
+  interface AccountVisitor <<Visitor>> {
+    + visit(account : PersonalAccount)
+    + visit(account : MerchantAccount)
+  }
+  class ReportVisitor <<报表访问者>> {
+    + toReportString() : String
+  }
+  class Ledger <<台账>> {
+    + addConsumed(paid : long)
+    + addRecharged(amount : long)
+  }
+  AccountVisitor <|.. ReportVisitor
+  PersonalAccount ..> AccountVisitor : accept
+  MerchantAccount ..> AccountVisitor : accept
+  ReportVisitor o-- "1" Ledger : 读累计
+}
+
+package "edu.dlut.campuscard.gateway" as gateway {
+  interface PaymentGateway <<Adapter::Target>> {
+    + pay(cardId : String, amount : long) : String
+  }
+  class AlipayGatewayAdapter {
+    - thirdParty : AlipayThirdParty
+  }
+  class WechatGatewayAdapter {
+    - thirdParty : WechatThirdParty
+  }
+  class AlipayThirdParty <<第三方>> {
+    + doAlipay(cardId, amount) : String
+  }
+  class WechatThirdParty <<第三方>> {
+    + doWechat(cardId, amount) : String
+  }
+  PaymentGateway <|.. AlipayGatewayAdapter
+  PaymentGateway <|.. WechatGatewayAdapter
+  AlipayGatewayAdapter o-- "1" AlipayThirdParty : 适配
+  WechatGatewayAdapter o-- "1" WechatThirdParty : 适配
+
+  class PaymentGatewayFactory <<工厂>> {
+    + gatewayFor(type : CardType) : PaymentGateway
+  }
+  PaymentGatewayFactory o-- "1" PaymentGateway : alipay / wechat
+  PaymentGatewayFactory ..> CardType : 路由
+}
+
+note bottom of ReportVisitor
+  重构前：对私账户、商户账户分别 for 循环硬算（报表里重复遍历流水）
+  重构后：账户树统一 accept(visitor)，算法与结构解耦
+end note
+
+@enduml

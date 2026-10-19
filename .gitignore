@@ -1,0 +1,37 @@
+# ===== 构建产物 =====
+target/
+*.class
+*.jar
+out-bad.txt
+out-good.txt
+
+# ===== 课堂资料与本地技能包：不纳入公开仓库 =====
+docs/
+.agents/
+
+# ===== 交付文档与答辩 PPT 工程：本仓库只保留代码 =====
+2026设计模式+X组+文档.pdf
+2026设计模式+X组+文档.docx
+2026设计模式+X组+答辩PPT.pptx
+projects/
+
+# ===== Python 缓存 =====
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# ===== IDE / 编辑器 =====
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# ===== 前端依赖与产物 =====
+node_modules/
+
+# ===== 操作系统临时文件 =====
+Thumbs.db
+Desktop.ini
+.DS_Store

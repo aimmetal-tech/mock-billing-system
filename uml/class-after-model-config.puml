@@ -1,0 +1,112 @@
+@startuml class-after-model-config
+' ============================================================
+'  重构后分包类图 ①：领域模型 与 全局配置
+'  模式：Singleton + Builder
+' ============================================================
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 20
+skinparam classFontSize 22
+skinparam classAttributeFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam packageFontSize 22
+skinparam dpi 200
+title 图 2-3  分包类图①：领域模型与全局配置（Singleton + Builder）
+
+package "edu.dlut.campuscard.model" as model {
+  class Card <<State 的 Context>> {
+    - id : String
+    - holder : String
+    - type : CardType
+    - vip : boolean
+    - balance : long
+    - todaySpent : long
+    - todayDate : String
+    - state : CardState
+    + state() : CardState
+    + transitionTo(next : CardState)
+    + status() : CardStatus
+    + decreaseBalance(amount)
+    + increaseBalance(amount)
+  }
+  class Merchant <<不可变>> {
+    - id : String
+    - name : String
+    - type : String
+  }
+  class Transaction <<不可变>> {
+    - id : String
+    - cardId : String
+    - merchantId : String
+    - amount : long
+    - paid : long
+    - channel : String
+    - note : String
+  }
+  class Result <<不可变值对象>> {
+    {static} + OK : String
+    {static} + REJECT : String
+    + status : String
+    + reason : String
+    + paid : long
+    + balance : long
+    {static} + ok(paid, balance) : Result
+    {static} + reject(reason, balance) : Result
+  }
+  class Money <<工具>> {
+    {static} + percentOf(amount, percent) : long
+  }
+  enum CardType {
+    STUDENT
+    TEACHER
+    STAFF
+    {static} + from(code) : CardType
+  }
+  enum CardStatus {
+    NORMAL
+    LOST
+    FROZEN
+    CLOSED
+  }
+}
+
+package "edu.dlut.campuscard.config" as config {
+  class AppConfig <<Singleton·不可变>> {
+    - dailyLimit : int
+    - vipDiscountPercent : int
+    - timeDiscountPercent : int
+    - fullReductionThreshold : int
+    - fullReductionAmount : int
+    - defaultPayChannel : String
+    {static} + get() : AppConfig
+    + dailyLimit() : int
+    + vipDiscountPercent() : int
+    + timeDiscountPercent() : int
+    + fullReductionThreshold() : int
+    + fullReductionAmount() : int
+  }
+  class AppConfigBuilder <<Builder>> {
+    + dailyLimit(value) : AppConfigBuilder
+    + vipDiscountPercent(value) : AppConfigBuilder
+    + timeDiscountPercent(value) : AppConfigBuilder
+    + fullReductionThreshold(value) : AppConfigBuilder
+    + fullReductionAmount(value) : AppConfigBuilder
+    + defaultPayChannel(value) : AppConfigBuilder
+    + build() : AppConfig
+  }
+}
+
+Card ..> CardType : type
+Card ..> CardStatus : status
+AppConfigBuilder ..> AppConfig : build()
+
+note bottom of AppConfig
+  重构前：public static int DAILY_LIMIT = 20000 ...
+  任意类都能改写（测试互相污染）。
+  重构后：Holder 持有唯一实例，字段 final 不可变，
+  只能通过 AppConfigBuilder 构造。
+end note
+
+@enduml

@@ -1,0 +1,15 @@
+{
+  "title": "报表口径：未产生交易的商户类型不应出现在 count 中",
+  "cards": [
+    {"id": "C500", "holder": "冯十二", "type": "STUDENT", "vip": false, "balance": 20000}
+  ],
+  "merchants": [
+    {"id": "M01", "name": "一食堂", "type": "canteen"},
+    {"id": "M02", "name": "教育超市", "type": "supermarket"},
+    {"id": "M03", "name": "洗衣房", "type": "laundry"}
+  ],
+  "ops": [
+    {"op": "consume", "card": "C500", "merchant": "M01", "amount": 1000, "hour": 9},
+    {"op": "report"}
+  ]
+}

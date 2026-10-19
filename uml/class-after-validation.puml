@@ -1,0 +1,66 @@
+@startuml class-after-validation
+' ============================================================
+'  重构后分包类图 ③：消费校验域
+'  模式：Chain of Responsibility
+' ============================================================
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 20
+skinparam classFontSize 22
+skinparam classAttributeFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam packageFontSize 22
+skinparam dpi 200
+title 图 2-5  分包类图③：消费校验域（Chain of Responsibility）
+
+package "edu.dlut.campuscard.validation" {
+
+  abstract class ValidationHandler <<Handler>> {
+    - next : ValidationHandler
+    + setNext(next : ValidationHandler) : ValidationHandler
+    + handle(context : ConsumeContext) : Result
+    # check(context : ConsumeContext) : Result
+  }
+  class CardExistsHandler
+  class MerchantExistsHandler
+  class CardStatusHandler
+  class AmountHandler
+  class BalanceHandler
+  class DailyLimitHandler
+
+  ValidationHandler <|-- CardExistsHandler
+  ValidationHandler <|-- MerchantExistsHandler
+  ValidationHandler <|-- CardStatusHandler
+  ValidationHandler <|-- AmountHandler
+  ValidationHandler <|-- BalanceHandler
+  ValidationHandler <|-- DailyLimitHandler
+  ValidationHandler o-- "0..1" ValidationHandler : next
+
+  class ValidationChain <<装配点>> {
+    + preConsumeChain() : ValidationHandler
+    + postConsumeChain() : ValidationHandler
+  }
+  ValidationChain ..> ValidationHandler : 组装
+
+  class ConsumeContext <<可变上下文>> {
+    + cardId : String
+    + merchantId : String
+    + amount : long
+    + hour : int
+    + card : Card
+    + merchant : Merchant
+    + paid : long
+  }
+  ValidationHandler ..> ConsumeContext : 读写
+  DailyLimitHandler ..> AppConfig : 读限额
+}
+
+note bottom of ValidationChain
+  计费前链：卡存在 → 商户存在 → 卡状态 → 金额合法
+  计费后链：余额充足 → 单日限额（含跨日重置）
+  重构前：全部内联散落在 consume() 里的一串 if
+end note
+
+@enduml

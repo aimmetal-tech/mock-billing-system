@@ -1,0 +1,88 @@
+@startuml class-after-pricing
+' ============================================================
+'  重构后分包类图 ②：计费域
+'  模式：Strategy + 简单工厂 + Decorator
+' ============================================================
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 20
+skinparam classFontSize 22
+skinparam classAttributeFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam packageFontSize 22
+skinparam dpi 200
+title 图 2-4  分包类图②：计费域（Strategy + 简单工厂 + Decorator）
+
+package "edu.dlut.campuscard.pricing" {
+
+  ' ---------- Strategy ----------
+  interface PricingStrategy <<Strategy>> {
+    + apply(amount : long) : long
+  }
+  class CanteenPricingStrategy
+  class SupermarketPricingStrategy
+  class OnlinePricingStrategy
+  class LaundryPricingStrategy
+  class PrintPricingStrategy
+  class DefaultPricingStrategy
+  PricingStrategy <|.. CanteenPricingStrategy
+  PricingStrategy <|.. SupermarketPricingStrategy
+  PricingStrategy <|.. OnlinePricingStrategy
+  PricingStrategy <|.. LaundryPricingStrategy
+  PricingStrategy <|.. PrintPricingStrategy
+  PricingStrategy <|.. DefaultPricingStrategy
+
+  class PricingStrategyFactory <<简单工厂>> {
+    {static} + of(merchantType : String) : PricingStrategy
+  }
+  PricingStrategyFactory ..> PricingStrategy : 产出
+
+  ' ---------- Decorator ----------
+  interface PriceComponent <<Decorator::Component>> {
+    + price(request : PriceRequest) : long
+  }
+  class MerchantPricingComponent <<基础价>> {
+    - strategy : PricingStrategy
+  }
+  abstract class PriceRuleDecorator <<Decorator>> {
+    # inner : PriceComponent
+  }
+  class TimeDiscountDecorator
+  class VipDiscountDecorator
+  class FullReductionDecorator
+  class PriceRequest <<不可变值对象>> {
+    + amount : long
+    + hour : int
+    + vip : boolean
+  }
+
+  PriceComponent <|.. MerchantPricingComponent
+  PriceComponent <|.. PriceRuleDecorator
+  PriceRuleDecorator <|-- TimeDiscountDecorator
+  PriceRuleDecorator <|-- VipDiscountDecorator
+  PriceRuleDecorator <|-- FullReductionDecorator
+  PriceRuleDecorator o-- "1" PriceComponent : inner
+  MerchantPricingComponent o-- "1" PricingStrategy : strategy
+
+  class PriceCalculator <<装配点>> {
+    - config : AppConfig
+    + calculate(merchant : Merchant, request : PriceRequest) : long
+  }
+  PriceCalculator ..> PricingStrategyFactory : 选择策略
+  PriceCalculator ..> PriceComponent : 装配装饰器链
+  TimeDiscountDecorator ..> AppConfig
+  VipDiscountDecorator ..> AppConfig
+  FullReductionDecorator ..> AppConfig
+  MerchantPricingComponent ..> Merchant : 读 type
+}
+
+note right of PriceCalculator
+  装配顺序（严格复刻重构前）：
+  基础价 → 时段折扣 → VIP 折扣 → 满减 → max(0, ·)
+  重构前：巨型 switch + if 层层嵌套
+  重构后：策略可插拔，优惠可任意组合与排序
+end note
+
+@enduml

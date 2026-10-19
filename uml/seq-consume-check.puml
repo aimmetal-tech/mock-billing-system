@@ -1,0 +1,59 @@
+@startuml seq-consume-check
+' ============================================================
+'  消费时序图（上半）重构后：解析 → 计费前校验 → 计费 → 计费后校验
+'  对应文档：第 1 章 项目介绍 —— 图 1-1
+' ============================================================
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign center
+skinparam participantFontSize 20
+skinparam actorFontSize 20
+skinparam arrowFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam dpi 200
+autonumber
+title 图 1-1  消费时序图①：校验与计费
+
+actor "调用方\n(ConsoleApp / ApiServer)" as Caller
+participant "CardService\n(Facade)" as Svc
+participant "StandardConsumeFlow\n(Template Method)" as Flow
+participant "ValidationChain\n(Chain of Responsibility)" as Chain
+participant "PriceCalculator\n(Strategy + Decorator)" as Price
+
+Caller -> Svc : consume(cardId, merchantId, amount, hour)
+Svc -> Flow : execute(cardId, merchantId, amount, hour)
+
+Flow -> Svc : card(cardId) / merchant(merchantId)
+Svc --> Flow : Card / Merchant
+Flow -> Flow : context.setCard / setMerchant
+
+Flow -> Chain : preConsumeChain().handle(context)
+Chain -> Chain : 卡存在 → 商户存在 → 卡状态 → 金额合法
+alt 前置校验不通过
+    Chain --> Flow : Result.reject(原因, balance)
+    Flow --> Svc : Result.reject
+    Svc --> Caller : Result(status=REJECT, 原余额)
+else 前置校验通过
+    Chain --> Flow : null
+end
+
+Flow -> Price : calculate(merchant, PriceRequest)
+Price -> Price : PricingStrategyFactory.of(merchant.type())
+Price -> Price : MerchantPricingComponent → 基础价
+Price -> Price : 时段折扣 → VIP 折扣 → 满减 → max(0, ·)
+Price --> Flow : paid
+Flow -> Flow : context.setPaid(paid)
+
+Flow -> Chain : postConsumeChain().handle(context)
+Chain -> Chain : 余额充足 → 单日限额（含跨日重置）
+alt 后置校验不通过
+    Chain --> Flow : Result.reject(原因, balance)
+    Flow --> Svc : Result.reject
+    Svc --> Caller : Result(status=REJECT, 原余额)
+else 后置校验通过（转图 1-2 结算）
+    Chain --> Flow : null
+end
+
+@enduml

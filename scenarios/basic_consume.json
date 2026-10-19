@@ -1,0 +1,19 @@
+{
+  "title": "基础消费：食堂/超市，无缺陷分支",
+  "cards": [
+    {"id": "C001", "holder": "张三", "type": "STUDENT", "vip": true, "balance": 10000},
+    {"id": "C002", "holder": "李四", "type": "TEACHER", "vip": false, "balance": 30000}
+  ],
+  "merchants": [
+    {"id": "M01", "name": "一食堂", "type": "canteen"},
+    {"id": "M02", "name": "教育超市", "type": "supermarket"}
+  ],
+  "ops": [
+    {"op": "recharge", "card": "C001", "amount": 20000},
+    {"op": "consume", "card": "C001", "merchant": "M01", "amount": 1500, "hour": 12},
+    {"op": "consume", "card": "C001", "merchant": "M02", "amount": 800, "hour": 18},
+    {"op": "consume", "card": "C002", "merchant": "M01", "amount": 2500, "hour": 11},
+    {"op": "state", "card": "C001"},
+    {"op": "state", "card": "C002"}
+  ]
+}

@@ -1,0 +1,44 @@
+@startuml seq-consume-settle
+' ============================================================
+'  消费时序图（下半）重构后：扣款 → 支付 → 记账 → 通知 → 返回
+'  对应文档：第 1 章 项目介绍 —— 图 1-2
+' ============================================================
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign center
+skinparam participantFontSize 20
+skinparam actorFontSize 20
+skinparam arrowFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam dpi 200
+autonumber
+title 图 1-2  消费时序图②：结算与通知
+
+actor "调用方" as Caller
+participant "CardService\n(Facade)" as Svc
+participant "StandardConsumeFlow\n(Template Method)" as Flow
+participant "Card\n(State::Context)" as Card
+participant "PaymentGateway\n(Adapter + 工厂)" as Gateway
+participant "Ledger / MerchantAccount\n(Composite + Visitor)" as Acc
+participant "EventPublisher\n(Observer)" as Pub
+
+Caller -> Svc : consume(...)  （前置与计费见 图 1-1）
+Svc -> Flow : settle(context)
+Flow -> Card : decreaseBalance(paid) / addTodaySpent(paid)
+Flow -> Gateway : gatewayFor(card.type()).pay(cardId, amount)
+Gateway --> Flow : channel（ALIPAY / WECHAT）
+Flow -> Acc : ledger.addConsumed(paid)\nmerchantAccount.record(paid)
+Flow -> Pub : publish(CardEvent.CONSUME, ...)
+Pub -> Pub : SmsListener / AppPushListener / EmailListener.onEvent(event)
+Pub --> Flow :
+Flow --> Svc : Result.ok(paid, balance)
+Svc --> Caller : Result(status=OK, paid, balance)
+
+note over Flow
+  结算步骤由模板方法的 settle() 落实，
+  具体算法分别委托给 Adapter、Composite/Visitor、Observer。
+end note
+
+@enduml

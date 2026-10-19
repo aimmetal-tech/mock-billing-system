@@ -1,0 +1,135 @@
+@startuml class-before
+' ============================================================
+'  重构前（bad-system）类图：坏味道集中营
+'  来源：bad-system/src/main/java/edu/dlut/campuscard/bad/
+'  对应文档：第 2 章 设计 —— 重构前类图
+' ============================================================
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam defaultFontSize 20
+skinparam classFontSize 22
+skinparam classAttributeFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam dpi 200
+title 图 2-1  重构前 bad-system 类图（坏味道标注）
+
+class Main <<入口>> {
+  + main(args)
+}
+
+class AppConfig <<坏味道8：全局可变静态配置>> {
+  {static} + DAILY_LIMIT : int = 20000
+  {static} + VIP_DISCOUNT_PERCENT : int = 5
+  {static} + TIME_DISCOUNT_PERCENT : int = 10
+  {static} + FULL_REDUCTION_THRESHOLD : int = 5000
+  {static} + FULL_REDUCTION_AMOUNT : int = 300
+  {static} + DEFAULT_PAY_CHANNEL : String = "ALIPAY"
+}
+
+class CampusCardSystem <<坏味道1：上帝类 God Class>> {
+  {static} + STATUS_NORMAL : int = 1
+  {static} + STATUS_LOST : int = 2
+  {static} + STATUS_FROZEN : int = 3
+  {static} + STATUS_CLOSED : int = 4
+  + cards : Map<String, Card>
+  + merchants : Map<String, Merchant>
+  + transactions : List<Transaction>
+  + totalConsumed : long
+  + totalRecharged : long
+  + countByMerchantType : Map<String, Integer>
+  --
+  + addCard(id, holder, type, vip, balance)
+  + addMerchant(id, name, type)
+  + recharge(cardId, amount) : Result
+  + consume(cardId, merchantId, amount, hour) : Result
+  + reportLoss(cardId) : Result
+  + recover(cardId) : Result
+  + statusName(s : int) : String
+  + report() : String
+  - ok(paid, balance) : Result
+  - reject(reason, balance) : Result
+  - pct(amount, percent) : long
+}
+
+class Card <<内部数据类>> {
+  + id : String
+  + holder : String
+  + type : String
+  + vip : boolean
+  + status : int
+  + balance : long
+  + todaySpent : long
+  + todayDate : String
+}
+
+class Merchant <<内部数据类>> {
+  + id : String
+  + name : String
+  + type : String
+}
+
+class Transaction <<内部数据类>> {
+  + id : String
+  + cardId : String
+  + merchantId : String
+  + amount : long
+  + paid : long
+  + channel : String
+  + note : String
+}
+
+class Result <<内部数据类>> {
+  + status : String
+  + reason : String
+  + paid : long
+  + balance : long
+}
+
+class AlipayThing <<坏味道9：第三方被直接 new>> {
+  ~ pay(cardId, amount) : String
+}
+class WechatThing <<坏味道9：第三方被直接 new>> {
+  ~ pay(cardId, amount) : String
+}
+class SmsThing <<坏味道6：通知硬编码>> {
+  ~ send(to, msg)
+}
+class PushThing <<坏味道6：通知硬编码>> {
+  ~ send(to, msg)
+}
+class MailThing <<坏味道6：通知硬编码>> {
+  ~ send(to, msg)
+}
+
+Main ..> CampusCardSystem : 使用
+
+CampusCardSystem "1" *-- "*" Card : cards
+CampusCardSystem "1" *-- "*" Merchant : merchants
+CampusCardSystem "1" *-- "*" Transaction : transactions
+CampusCardSystem ..> Result : 构造返回
+CampusCardSystem ..> AlipayThing : new
+CampusCardSystem ..> WechatThing : new
+CampusCardSystem ..> SmsThing : new
+CampusCardSystem ..> PushThing : new
+CampusCardSystem ..> MailThing : new
+CampusCardSystem ..> AppConfig : 读取 public static 字段
+
+note right of CampusCardSystem
+  坏味道清单（每个坏味道对应重构版中的一个模式修复点）
+  1. 上帝类：账户/计费/优惠/校验/状态/通知/支付/报表 全塞进一个类
+  2. 巨型 switch(merchantType) 决定计费
+  3. 优惠规则 if 层层嵌套（时段→VIP→满减）
+  4. 校验逻辑内联散落在 consume() 里
+  5. 卡状态用 int status + if 分支判断
+  6. 通知渠道在业务方法里依次 new
+  7. 报表对异构账户分别 for 循环累加
+  8. public static 全局可变配置
+  9. 第三方支付直接 new，接口不统一
+  10. 消费流程（校验→计费→扣款→记账→通知）完全写死
+  ★ 缺陷：case "laundry "（多一空格）与 case "PRINT"（大写）
+     恒不可达，导致洗衣/文印的加价永远不会生效
+end note
+
+@enduml

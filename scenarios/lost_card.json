@@ -1,0 +1,18 @@
+{
+  "title": "挂失与解挂：状态流转与拒绝",
+  "cards": [
+    {"id": "C200", "holder": "孙八", "type": "STUDENT", "vip": false, "balance": 5000}
+  ],
+  "merchants": [
+    {"id": "M01", "name": "一食堂", "type": "canteen"}
+  ],
+  "ops": [
+    {"op": "consume", "card": "C200", "merchant": "M01", "amount": 1000, "hour": 12},
+    {"op": "loss", "card": "C200"},
+    {"op": "consume", "card": "C200", "merchant": "M01", "amount": 500, "hour": 12},
+    {"op": "recharge", "card": "C200", "amount": 3000},
+    {"op": "loss", "card": "C200"},
+    {"op": "recover", "card": "C200"},
+    {"op": "consume", "card": "C200", "merchant": "M01", "amount": 500, "hour": 12}
+  ]
+}

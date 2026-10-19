@@ -1,0 +1,18 @@
+{
+  "title": "优惠叠加：VIP + 时段折扣 + 满减",
+  "cards": [
+    {"id": "C100", "holder": "王五", "type": "STUDENT", "vip": true, "balance": 50000},
+    {"id": "C101", "holder": "赵六", "type": "STAFF", "vip": false, "balance": 50000},
+    {"id": "C102", "holder": "钱七", "type": "TEACHER", "vip": true, "balance": 50000}
+  ],
+  "merchants": [
+    {"id": "M01", "name": "一食堂", "type": "canteen"}
+  ],
+  "ops": [
+    {"op": "consume", "card": "C100", "merchant": "M01", "amount": 6000, "hour": 13},
+    {"op": "consume", "card": "C101", "merchant": "M01", "amount": 6000, "hour": 13},
+    {"op": "consume", "card": "C102", "merchant": "M01", "amount": 6000, "hour": 10},
+    {"op": "consume", "card": "C100", "merchant": "M01", "amount": 4999, "hour": 13},
+    {"op": "consume", "card": "C101", "merchant": "M01", "amount": 1200, "hour": 14}
+  ]
+}

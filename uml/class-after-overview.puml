@@ -1,0 +1,28 @@
+@startuml class-after-overview
+' ============================================================
+'  重构后（refactored-system）总类图：分层分包的整体结构
+'  对应文档：第 2 章 设计 —— 重构后总类图
+' ============================================================
+skinparam shadowing false
+skinparam rectangleBorderRadius 8
+skinparam defaultFontSize 22
+skinparam arrowFontSize 20
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam dpi 200
+title 图 2-2  重构后 campuscard 总类图（分层分包与依赖）
+
+rectangle "演示外壳 app\nConsoleApp · ApiServer · SceneRunner" as app #E8F0FE
+rectangle "服务门面 service（Facade + Template Method）\nCardService · ConsumeFlow · StandardConsumeFlow" as service #DDEBF7
+rectangle "业务子系统\nvalidation（Chain） · pricing（Strategy+Decorator）\nstate（State） · notify（Observer）" as biz #FFF2CC
+rectangle "账户与支付子系统\naccount（Composite+Visitor） · gateway（Adapter+工厂）" as acc #FFF2CC
+rectangle "基础设施\nconfig（Singleton+Builder） · model（领域模型）" as infra #E2EFDA
+
+app --> service : 调用门面
+service --> biz : 校验 / 计费 / 状态 / 通知
+service --> acc : 记账报表 / 支付
+biz --> infra : 依赖
+acc --> infra : 依赖
+service --> infra : 读取配置 / 领域对象
+
+@enduml

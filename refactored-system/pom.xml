@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 重构后：由 11 种设计模式支撑的清晰结构 -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>edu.dlut</groupId>
+        <artifactId>campus-card-refactor</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>refactored-system</artifactId>
+    <name>refactored-system</name>
+    <description>重构后：Strategy/Decorator/Chain/State/Observer/Composite/Visitor/Singleton/Adapter/AbstractFactory/TemplateMethod</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- 行为等价验证：测试期引用重构前基线，与重构后输出逐行对比 -->
+        <dependency>
+            <groupId>edu.dlut</groupId>
+            <artifactId>bad-system</artifactId>
+            <version>1.0.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>edu.dlut.campuscard.app.ConsoleApp</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

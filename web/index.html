@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校园一卡通 · 重构前后行为对比</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --panel2: #243244;
+    --line: #334155; --text: #e2e8f0; --muted: #94a3b8;
+    --ok: #34d399; --rej: #f87171; --accent: #60a5fa; --bad: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  header {
+    padding: 18px 24px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 20px; margin: 0; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .up { background: var(--ok); } .down { background: var(--rej); }
+  .controls {
+    margin: 16px 24px; padding: 16px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  select, input {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px; font-size: 14px; min-width: 110px;
+  }
+  button {
+    background: var(--accent); color: #0b1220; border: none; border-radius: 8px;
+    padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.1); }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 24px 24px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .panel h2 { margin: 0 0 4px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+  .tag.bad { background: rgba(251,191,36,.15); color: var(--bad); }
+  .tag.good { background: rgba(52,211,153,.15); color: var(--ok); }
+  .result { margin: 12px 0; padding: 12px; border-radius: 8px; background: var(--panel2); min-height: 54px; }
+  .result .line1 { font-size: 15px; font-weight: 700; }
+  .result .line2 { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .ok { color: var(--ok); } .rej { color: var(--rej); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  .report { margin-top: 12px; font-family: Consolas, monospace; font-size: 12px;
+    color: var(--muted); background: var(--panel2); padding: 10px; border-radius: 8px; word-break: break-all; }
+  .diff { outline: 2px solid var(--rej); outline-offset: 2px; }
+  .banner { margin: 0 24px 16px; padding: 10px 14px; border-radius: 8px; font-size: 13px;
+    background: rgba(96,165,250,.12); color: var(--accent); }
+  .err { color: var(--rej); font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>校园一卡通 · 重构前后行为对比</h1>
+    <span class="sub">
+      <span class="status-dot" :class="up.bad ? 'up' : 'down'"></span>重构前 :8081 &nbsp;
+      <span class="status-dot" :class="up.good ? 'up' : 'down'"></span>重构后 :8082
+    </span>
+  </header>
+
+  <div class="banner">
+    同一组输入分别打到两套服务，逐字段对比响应与账户状态。设计模式重构不改变业务行为——
+    唯一差异来自被修复的历史缺陷（洗衣房/文印分支在重构前恒不可达）。
+  </div>
+
+  <div class="controls">
+    <div class="field">
+      <label>卡片</label>
+      <select v-model="form.card">
+        <option v-for="c in cardOptions" :value="c">{{ c }}</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>商户</label>
+      <select v-model="form.merchant">
+        <option v-for="m in merchantOptions" :value="m">{{ m }}</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>金额(分)</label>
+      <input type="number" v-model.number="form.amount">
+    </div>
+    <div class="field">
+      <label>时段(0-23)</label>
+      <input type="number" v-model.number="form.hour">
+    </div>
+    <button @click="consume">消费</button>
+    <button class="ghost" @click="recharge">充值</button>
+    <button class="ghost" @click="loss">挂失</button>
+    <button class="ghost" @click="recover">解挂</button>
+    <button class="ghost" @click="refresh">刷新状态</button>
+  </div>
+
+  <div class="grid">
+    <div class="panel" v-for="side in sides" :key="side.key">
+      <h2>
+        <span class="tag" :class="side.key==='bad' ? 'bad' : 'good'">{{ side.key==='bad' ? '重构前' : '重构后' }}</span>
+        {{ side.title }}
+      </h2>
+      <div class="result" :class="{ diff: hasDiff }">
+        <template v-if="side.result">
+          <div class="line1" :class="{ ok: side.result.status==='OK', rej: side.result.status!=='OK' }">
+            {{ side.result.status }}
+            <template v-if="side.result.status==='OK'">· 实付 {{ side.result.paid }} 分</template>
+            <template v-else>· {{ side.result.reason }}</template>
+          </div>
+          <div class="line2">余额 {{ side.result.balance }} 分</div>
+        </template>
+        <div v-else class="line2">（尚未操作）</div>
+      </div>
+      <div class="err" v-if="side.error">{{ side.error }}</div>
+
+      <table>
+        <thead><tr><th>卡号</th><th>持卡人</th><th>状态</th><th>余额</th></tr></thead>
+        <tbody>
+          <tr v-for="c in side.cards" :key="c.id">
+            <td>{{ c.id }}</td><td>{{ c.holder }}</td><td>{{ c.status }}</td><td>{{ c.balance }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="report" v-if="side.report">{{ side.report }}</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, reactive, ref, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const BASE = { bad: 'http://localhost:8081', good: 'http://localhost:8082' };
+    const cardOptions = ['C001', 'C002', 'C003'];
+    const merchantOptions = ['M01', 'M02', 'M03', 'M04', 'M05'];
+
+    const form = reactive({ card: 'C001', merchant: 'M01', amount: 1500, hour: 12 });
+    const up = reactive({ bad: false, good: false });
+
+    const sides = reactive([
+      { key: 'bad',  title: '结构混乱（上帝类）', base: BASE.bad,  result: null, cards: [], report: '', error: '' },
+      { key: 'good', title: '设计模式重构版',     base: BASE.good, result: null, cards: [], report: '', error: '' }
+    ]);
+
+    async function call(side, path, body) {
+      side.error = '';
+      try {
+        const opt = { method: body ? 'POST' : 'GET' };
+        if (body) {
+          opt.headers = { 'Content-Type': 'application/json' };
+          opt.body = JSON.stringify(body);
+        }
+        const res = await fetch(side.base + path, opt);
+        return await res.json();
+      } catch (e) {
+        side.error = '无法连接 ' + side.base + '（请先启动服务）';
+        return null;
+      }
+    }
+
+    async function loadState(side) {
+      const data = await call(side, '/api/state');
+      if (data) { side.cards = data.cards; }
+      const rep = await call(side, '/api/report');
+      if (rep) { side.report = rep.report; }
+    }
+
+    async function broadcast(path, body, applyResult) {
+      await Promise.all(sides.map(async (side) => {
+        const data = await call(side, path, body);
+        if (data && applyResult) { side.result = data; }
+      }));
+      await Promise.all(sides.map(loadState));
+    }
+
+    const consume = () => broadcast('/api/consume',
+      { card: form.card, merchant: form.merchant, amount: form.amount, hour: form.hour }, true);
+    const recharge = () => broadcast('/api/recharge', { card: form.card, amount: form.amount }, true);
+    const loss = () => broadcast('/api/loss', { card: form.card }, true);
+    const recover = () => broadcast('/api/recover', { card: form.card }, true);
+    const refresh = () => Promise.all(sides.map(loadState));
+
+    async function ping() {
+      for (const side of sides) {
+        try {
+          await fetch(side.base + '/api/report');
+          up[side.key] = true;
+        } catch (e) { up[side.key] = false; }
+      }
+    }
+
+    onMounted(() => { ping(); refresh(); });
+
+    const hasDiff = ref(false);
+
+    return { form, up, sides, cardOptions, merchantOptions, consume, recharge, loss, recover, refresh, hasDiff };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "title": "缺陷场景：洗衣房/文印分支在重构前恒不可达（预期出现一处已知差异）",
+  "cards": [
+    {"id": "C400", "holder": "郑十一", "type": "STUDENT", "vip": false, "balance": 50000}
+  ],
+  "merchants": [
+    {"id": "M03", "name": "洗衣房", "type": "laundry"},
+    {"id": "M04", "name": "文印中心", "type": "print"}
+  ],
+  "ops": [
+    {"op": "consume", "card": "C400", "merchant": "M03", "amount": 2000, "hour": 15},
+    {"op": "consume", "card": "C400", "merchant": "M04", "amount": 1000, "hour": 16}
+  ]
+}

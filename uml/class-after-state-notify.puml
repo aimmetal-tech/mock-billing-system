@@ -1,0 +1,82 @@
+@startuml class-after-state-notify
+' ============================================================
+'  重构后分包类图 ④：卡片状态 与 事件通知
+'  模式：State + Observer
+' ============================================================
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 20
+skinparam classFontSize 22
+skinparam classAttributeFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam packageFontSize 22
+skinparam dpi 200
+title 图 2-6  分包类图④：卡片状态与事件通知（State + Observer）
+
+package "edu.dlut.campuscard.state" as state {
+  interface CardState <<State>> {
+    + status() : CardStatus
+    + name() : String
+    + rejectConsume() : String
+    + rejectRecharge() : String
+    + canReportLoss() : boolean
+    + canRecover() : boolean
+  }
+  class NormalState <<singleton>> {
+    {static} + INSTANCE : NormalState
+  }
+  class LostState <<singleton>> {
+    {static} + INSTANCE : LostState
+  }
+  class FrozenState <<singleton>> {
+    {static} + INSTANCE : FrozenState
+  }
+  class ClosedState <<singleton>> {
+    {static} + INSTANCE : ClosedState
+  }
+  CardState <|.. NormalState
+  CardState <|.. LostState
+  CardState <|.. FrozenState
+  CardState <|.. ClosedState
+}
+
+package "edu.dlut.campuscard.notify" as notify {
+  interface CardEventListener <<Observer>> {
+    + onEvent(event : CardEvent)
+  }
+  class SmsListener
+  class AppPushListener
+  class EmailListener
+  CardEventListener <|.. SmsListener
+  CardEventListener <|.. AppPushListener
+  CardEventListener <|.. EmailListener
+
+  class EventPublisher <<Subject>> {
+    + subscribe(listener : CardEventListener)
+    + publish(event : CardEvent)
+  }
+  class CardEvent <<事件>> {
+    + type : EventType
+    + cardId : String
+    + holder : String
+    + message : String
+  }
+  EventPublisher o-- "*" CardEventListener : listeners
+  EventPublisher ..> CardEvent : 发布
+}
+
+class Card <<State::Context>> {
+  - state : CardState
+  + transitionTo(next : CardState)
+  + status() : CardStatus
+}
+Card o-- "1" CardState : state
+
+note bottom of CardState
+  重构前：int status == 1/2/3/4 + 到处 if 判断
+  重构后：每个状态下“能做什么、被拒原因”内聚到状态类
+end note
+
+@enduml

@@ -1,0 +1,55 @@
+@startuml seq-lost
+' ============================================================
+'  挂失时序图（重构后）：State 模式 + Observer 模式协作
+'  对应文档：第 1 章 项目介绍 —— 挂失时序图
+' ============================================================
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign center
+skinparam participantFontSize 20
+skinparam actorFontSize 20
+skinparam arrowFontSize 19
+skinparam noteFontSize 18
+skinparam titleFontSize 26
+skinparam dpi 200
+autonumber
+title 图 1-3  重构后挂失（reportLoss）时序图
+
+actor "调用方\n(ConsoleApp / ApiServer)" as Caller
+participant "CardService\n(Facade)" as Svc
+participant "Card\n(State::Context)" as Card
+participant "NormalState / LostState\n(State)" as State
+participant "EventPublisher\n(Observer)" as Pub
+
+Caller -> Svc : reportLoss(cardId)
+Svc -> Svc : cards.get(cardId)
+
+alt 卡不存在
+    Svc --> Caller : Result.reject("卡不存在", 0)
+else 卡存在
+    Svc -> Card : state()
+    Card --> Svc : 当前状态对象
+    Svc -> State : canReportLoss()
+
+    alt 当前状态不可挂失
+        State --> Svc : false
+        Svc --> Caller : Result.reject("当前状态不可挂失", balance)
+    else 允许挂失（NormalState）
+        State --> Svc : true
+        Svc -> Card : transitionTo(LostState.INSTANCE)
+        Card -> Card : state = LostState.INSTANCE
+        Svc -> Pub : publish(CardEvent.LOSS, "卡 " + id + " 已挂失")
+        Pub -> Pub : SmsListener / AppPushListener / EmailListener.onEvent(event)
+        Pub --> Svc :
+        Svc --> Caller : Result.ok(0, balance)
+    end
+end
+
+note over Card, State
+  状态行为被内聚到状态类中：
+  NormalState.canReportLoss()=true，LostState.canReportLoss()=false。
+  取代重构前 reportLoss() 里对 int status 的 if 判断。
+end note
+
+@enduml
